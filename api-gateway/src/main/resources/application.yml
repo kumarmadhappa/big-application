@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: api-gateway
+  main:
+    web-application-type: reactive
+  cloud:
+    gateway:
+      routes:
+        - id: user-service-auth
+          uri: ${app.routes.user-service-uri:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**
+        - id: user-service-users
+          uri: ${app.routes.user-service-uri:http://localhost:8081}
+          predicates:
+            - Path=/api/users/**
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always #when_authorized
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.bigapplication.apigateway: INFO
+    com.bigapplication.apigateway.filter.JwtValidationGlobalFilter: DEBUG
+
+app:
+  jwt:
+    issuer: user-service
+    secret: ${JWT_SECRET}
+  rate-limit:
+    requests-per-minute: 120
+    burst-capacity: 20
+  routes:
+    user-service-uri: ${USER_SERVICE_URI:http://localhost:8081}
