@@ -4,3 +4,5 @@ target/
 *.iml
 **/logs/
 *.log
+**/dist
+**/node_modules
