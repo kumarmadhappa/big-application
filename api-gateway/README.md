@@ -17,6 +17,7 @@ Spring Cloud Gateway entrypoint for JWT validation, routing, rate limiting, and 
 
 - `JWT_SECRET`
 - `USER_SERVICE_URI` - optional, defaults to `http://localhost:8081`
+- `BANKING_SERVICE_URI` - optional, defaults to `http://localhost:8082`
 
 The gateway runs on `http://localhost:8080`.
 
@@ -24,6 +25,7 @@ The gateway runs on `http://localhost:8080`.
 
 - `/api/auth/**` -> `user-service`
 - `/api/users/**` -> `user-service`
+- `/api/banking/**` -> `banking-system`
 
 ## Filters
 
@@ -46,6 +48,15 @@ Actuator endpoints:
 - `GET /actuator/metrics`
 - `GET /actuator/metrics/**`
 - `GET /actuator/prometheus`
+
+## Logging
+
+Log files:
+
+- `logs/api-gateway.log`
+- `logs/api-gateway-error.log`
+
+Set `LOG_PATH` to change the log directory.
 
 ## Build and run
 

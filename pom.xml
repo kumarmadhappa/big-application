@@ -82,5 +82,6 @@
     <modules>
         <module>user-service</module>
         <module>api-gateway</module>
+        <module>banking-system</module>
     </modules>
 </project>

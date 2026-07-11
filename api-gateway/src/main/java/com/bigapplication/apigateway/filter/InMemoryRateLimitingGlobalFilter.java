@@ -29,6 +29,7 @@ public class InMemoryRateLimitingGlobalFilter implements GlobalFilter, Ordered {
             "/actuator/metrics",
             "/actuator/metrics/**",
             "/actuator/prometheus",
+            "/api/banking/auth/**",
             "/api/auth/**");
 
     private final RateLimitProperties properties;

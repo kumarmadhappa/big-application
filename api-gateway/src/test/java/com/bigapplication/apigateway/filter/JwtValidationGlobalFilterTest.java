@@ -57,6 +57,17 @@ class JwtValidationGlobalFilterTest {
     }
 
     @Test
+    void bankingAuthPathSkipsJwtValidation() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.post("/api/banking/auth/login").build());
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
+        verify(chain).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+    }
+
+    @Test
     void actuatorHealthSkipsJwtValidation() {
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/actuator/health").build());

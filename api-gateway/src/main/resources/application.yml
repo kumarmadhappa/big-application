@@ -14,6 +14,10 @@ spring:
           uri: ${app.routes.user-service-uri:http://localhost:8081}
           predicates:
             - Path=/api/users/**
+        - id: banking-system
+          uri: ${app.routes.banking-service-uri:http://localhost:8082}
+          predicates:
+            - Path=/api/banking/**
 
 server:
   port: 8080
@@ -48,3 +52,4 @@ app:
     burst-capacity: 20
   routes:
     user-service-uri: ${USER_SERVICE_URI:http://localhost:8081}
+    banking-service-uri: ${BANKING_SERVICE_URI:http://localhost:8082}

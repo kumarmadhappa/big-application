@@ -48,6 +48,19 @@ class InMemoryRateLimitingGlobalFilterTest {
     }
 
     @Test
+    void bankingAuthPath_isExemptFromRateLimiting() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.post("/api/banking/auth/login")
+                        .header("X-Forwarded-For", "10.0.0.1")
+                        .build());
+
+        StepVerifier.create(filter.filter(exchange, chain)).verifyComplete();
+
+        verify(chain).filter(any());
+        assertThat(exchange.getResponse().getStatusCode()).isNull();
+    }
+
+    @Test
     void secondRequestWithinWindow_returns429() {
         MockServerWebExchange first = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/users")

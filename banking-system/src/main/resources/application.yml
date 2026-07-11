@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: banking-system
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:postgresql://ep-fancy-poetry-aovat19y.c-2.ap-southeast-1.aws.neon.tech/banking_db?sslmode=require&channelBinding=require
+    username: neondb_owner
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always #when_authorized
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+server:
+  port: 8082
+
+logging:
+  level:
+    root: INFO
+    com.bigapplication.bankingsystem: INFO
+
+app:
+  jwt:
+    issuer: banking-system
+    secret: ${JWT_SECRET}
+    access-token-expiration-minutes: 60
+    refresh-token-expiration-minutes: 10080
+  admin:
+    username: ${BANK_ADMIN_USERNAME:bank_admin}
+    email: ${BANK_ADMIN_EMAIL:bank.admin@example.com}
+    password: ${BANK_ADMIN_PASSWORD:Admin@123}
