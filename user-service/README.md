@@ -40,8 +40,11 @@ The service runs on `http://localhost:8081`.
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `GET /api/users/**`
+  - `/api/users/**` requires a Bearer token.
 
-`/api/users/**` requires a Bearer token.
+## OpenAPI specification
+
+`user-service/openapi.yaml`
 
 ## Database
 

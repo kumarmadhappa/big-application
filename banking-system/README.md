@@ -47,6 +47,10 @@ Account holder:
 - `POST /api/banking/accounts/{accountId}/transactions/deposit`
 - `POST /api/banking/accounts/{accountId}/transactions/withdraw`
 
+## OpenAPI specification
+
+`banking-system/openapi.yaml`
+
 ## Account rules
 
 - Savings account: cannot go below `0.00`

@@ -45,6 +45,10 @@ npm run start
 - user CRUD requests are proxied to `user-service`
 - JWTs are kept in HTTP-only cookies
 
+## OpenAPI specification
+
+`ui/openapi.yaml`
+
 ## End-to-end flow
 
 1. `src/main.tsx` loads `App` and wraps it with `BrowserRouter`.

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 export function Layout({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const userLabel = auth.user?.username ? `Signed in as ${auth.user.username}` : 'Logged in';
 
   return (
     <div className="min-h-full">
@@ -18,6 +19,9 @@ export function Layout({ children }: { children: ReactNode }) {
                 <NavLink to="/users" className={({ isActive }) => isActive ? 'text-cyan-400' : 'text-slate-300'}>
                   Users
                 </NavLink>
+                <span className="max-w-[220px] truncate rounded-full border border-slate-700 px-3 py-1.5 text-slate-200">
+                  {userLabel}
+                </span>
                 <button
                   type="button"
                   onClick={() => void auth.logout()}

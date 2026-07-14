@@ -1,0 +1,246 @@
+openapi: 3.0.3
+info:
+  title: UI BFF API
+  version: 1.0.0
+  description: Express backend-for-frontend API used by the React UI.
+servers:
+  - url: http://localhost:4000
+tags:
+  - name: Session
+  - name: Auth Proxy
+  - name: Users Proxy
+  - name: Health
+paths:
+  /api/session:
+    get:
+      tags: [Session]
+      summary: Check whether an access token cookie exists
+      responses:
+        '200':
+          description: Session status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+
+  /api/auth/register:
+    post:
+      tags: [Auth Proxy]
+      summary: Proxy registration to user-service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/auth/login:
+    post:
+      tags: [Auth Proxy]
+      summary: Proxy login to user-service and set auth cookies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '400':
+          description: Upstream validation/auth failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/auth/refresh:
+    post:
+      tags: [Auth Proxy]
+      summary: Refresh auth using refresh-token cookie
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          description: Missing refresh token cookie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+  /api/auth/logout:
+    post:
+      tags: [Auth Proxy]
+      summary: Clear auth cookies
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/users:
+    get:
+      tags: [Users Proxy]
+      summary: Proxy list-users request
+      security:
+        - accessTokenCookie: []
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+    post:
+      tags: [Users Proxy]
+      summary: Proxy create-user request
+      security:
+        - accessTokenCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+
+  /api/users/{id}:
+    get:
+      tags: [Users Proxy]
+      summary: Proxy get-user request
+      security:
+        - accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+    put:
+      tags: [Users Proxy]
+      summary: Proxy update-user request
+      security:
+        - accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+    delete:
+      tags: [Users Proxy]
+      summary: Proxy delete-user request
+      security:
+        - accessTokenCookie: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+
+  /healthz:
+    get:
+      tags: [Health]
+      summary: UI BFF health check
+      responses:
+        '200':
+          description: Health response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+components:
+  securitySchemes:
+    accessTokenCookie:
+      type: apiKey
+      in: cookie
+      name: ui_access_token
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  responses:
+    Error401:
+      description: Missing access token cookie
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SimpleError'
+  schemas:
+    SessionResponse:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+    SimpleError:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    PassThroughResponse:
+      type: object
+      description: Response payload returned by user-service and proxied unchanged.
+      additionalProperties: true

@@ -27,6 +27,10 @@ The gateway runs on `http://localhost:8080`.
 - `/api/users/**` -> `user-service`
 - `/api/banking/**` -> `banking-system`
 
+## OpenAPI specification
+
+`api-gateway/openapi.yaml`
+
 ## Filters
 
 - `JwtValidationGlobalFilter`

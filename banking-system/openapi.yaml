@@ -1,0 +1,394 @@
+openapi: 3.0.3
+info:
+  title: Banking System API
+  version: 1.0.0
+  description: Banking accounts and transactions API.
+servers:
+  - url: http://localhost:8082
+tags:
+  - name: Banking Auth
+  - name: Banking Admin
+  - name: Banking Accounts
+  - name: Banking Transactions
+paths:
+  /api/banking/auth/login:
+    post:
+      tags: [Banking Auth]
+      summary: Login admin or account holder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+  /api/banking/auth/refresh:
+    post:
+      tags: [Banking Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+
+  /api/banking/admin/accounts:
+    post:
+      tags: [Banking Admin]
+      summary: Create an account holder and bank account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAccountResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /api/banking/accounts/mine:
+    get:
+      tags: [Banking Accounts]
+      summary: List accounts for authenticated holder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Accounts fetched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAccountList'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /api/banking/accounts/{accountId}/transactions/deposit:
+    post:
+      tags: [Banking Transactions]
+      summary: Deposit into account
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTransactionResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /api/banking/accounts/{accountId}/transactions/withdraw:
+    post:
+      tags: [Banking Transactions]
+      summary: Withdraw from account
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTransactionResponse'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  responses:
+    Error400:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error404:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Error500:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    HolderType:
+      type: string
+      enum: [PERSON, COMPANY]
+    AccountSegment:
+      type: string
+      enum: [CONSUMER, COMMERCIAL]
+    AccountType:
+      type: string
+      enum: [SAVINGS, CREDIT]
+    UserRole:
+      type: string
+      enum: [ADMIN, HOLDER]
+    TransactionType:
+      type: string
+      enum: [DEPOSIT, WITHDRAWAL]
+
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    TransactionRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+    CreateAccountRequest:
+      type: object
+      required:
+        - holderType
+        - displayName
+        - username
+        - email
+        - password
+        - accountSegment
+        - accountType
+        - initialBalance
+      properties:
+        holderType:
+          $ref: '#/components/schemas/HolderType'
+        displayName:
+          type: string
+          maxLength: 150
+        username:
+          type: string
+          minLength: 4
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 120
+        accountSegment:
+          $ref: '#/components/schemas/AccountSegment'
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        initialBalance:
+          type: number
+          format: double
+          minimum: 0
+        creditLimit:
+          type: number
+          format: double
+          minimum: 0
+    AuthUserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+    AuthResponse:
+      type: object
+      properties:
+        tokenType:
+          type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresInSeconds:
+          type: integer
+          format: int64
+        user:
+          $ref: '#/components/schemas/AuthUserResponse'
+    AccountResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        accountNumber:
+          type: string
+        accountSegment:
+          $ref: '#/components/schemas/AccountSegment'
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        balance:
+          type: number
+          format: double
+        creditLimit:
+          type: number
+          format: double
+        holderType:
+          $ref: '#/components/schemas/HolderType'
+        holderName:
+          type: string
+        holderUsername:
+          type: string
+    TransactionResponse:
+      type: object
+      properties:
+        transactionId:
+          type: integer
+          format: int64
+        accountId:
+          type: integer
+          format: int64
+        accountNumber:
+          type: string
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        amount:
+          type: number
+          format: double
+        balanceBefore:
+          type: number
+          format: double
+        balanceAfter:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiResponseAuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AuthResponse'
+    ApiResponseAccountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AccountResponse'
+    ApiResponseAccountList:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountResponse'
+    ApiResponseTransactionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/TransactionResponse'
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+

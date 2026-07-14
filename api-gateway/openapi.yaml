@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: API Gateway Surface API
+  version: 1.0.0
+  description: |
+    Externally exposed endpoints on the API Gateway. Most API paths are pass-through routes to backend services.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: User Service (Routed)
+  - name: Banking System (Routed)
+  - name: Gateway Actuator
+paths:
+  /api/auth/register:
+    post:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service register
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/auth/login:
+    post:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service login
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/auth/refresh:
+    post:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service token refresh
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/users:
+    get:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service list users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+    post:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service create user
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/users/{id}:
+    get:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service get user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+    put:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+    delete:
+      tags: [User Service (Routed)]
+      summary: Routed to user-service delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Forwarded response from user-service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+
+  /api/banking/auth/login:
+    post:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system login
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/auth/refresh:
+    post:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system refresh
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/admin/accounts:
+    post:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system admin account creation
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/accounts/mine:
+    get:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system my accounts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/accounts/{accountId}/transactions/deposit:
+    post:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system deposit
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/accounts/{accountId}/transactions/withdraw:
+    post:
+      tags: [Banking System (Routed)]
+      summary: Routed to banking-system withdraw
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+
+  /actuator/health:
+    get:
+      tags: [Gateway Actuator]
+      summary: Gateway health endpoint
+      responses:
+        '200':
+          description: Health response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /actuator/info:
+    get:
+      tags: [Gateway Actuator]
+      summary: Gateway info endpoint
+      responses:
+        '200':
+          description: Info response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /actuator/metrics:
+    get:
+      tags: [Gateway Actuator]
+      summary: Metrics index
+      responses:
+        '200':
+          description: Metrics response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /actuator/prometheus:
+    get:
+      tags: [Gateway Actuator]
+      summary: Prometheus scrape endpoint
+      responses:
+        '200':
+          description: Prometheus text
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+  schemas:
+    PassThroughResponse:
+      type: object
+      description: Response payload is produced by downstream service and forwarded by gateway.
+      additionalProperties: true

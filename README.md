@@ -1,6 +1,6 @@
 # Big Application
 
-Distributed Spring Boot microservices starter.
+Distributed Spring Boot microservices applications.
 
 ## Services
 
