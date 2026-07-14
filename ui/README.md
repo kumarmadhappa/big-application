@@ -15,7 +15,7 @@ React + Express + Tailwind CSS frontend for user management.
 
 `server/index.ts` expects:
 
-- `USER_SERVICE_URL` - optional, defaults to `http://localhost:8081`
+- `API_GATEWAY_URL` - optional, defaults to `http://localhost:8080`
 - `PORT` - optional, defaults to `4000`
 - `ACCESS_COOKIE_NAME` - optional
 - `REFRESH_COOKIE_NAME` - optional
@@ -41,8 +41,8 @@ npm run start
 
 ## Backend integration
 
-- login and refresh go through Express
-- user CRUD requests are proxied to `user-service`
+- login and refresh go through Express and then the API gateway
+- user CRUD requests are proxied to the API gateway
 - JWTs are kept in HTTP-only cookies
 
 ## OpenAPI specification
@@ -56,10 +56,12 @@ npm run start
 3. `AuthProvider` calls `GET /api/session` through Express to restore auth state.
 4. `LoginPage.tsx` submits credentials through `auth.login()`.
 5. `AuthContext` calls `POST /api/auth/login`.
-6. `server/index.ts` forwards login to `user-service`.
-7. `user-service` validates credentials and returns JWTs.
-8. Express stores JWTs in HTTP-only cookies and returns the auth response.
-9. `UsersPage.tsx` calls `/api/users` to load the list.
-10. Express adds the access token from cookies and proxies to `user-service`.
-11. Create, update, and delete actions go through the same Express proxy path.
-12. Logout clears cookies in Express and resets the React auth state.
+6. `server/index.ts` forwards login to the API gateway.
+7. The gateway routes the request to `user-service`.
+8. `user-service` validates credentials and returns JWTs.
+9. Express stores JWTs in HTTP-only cookies and returns the auth response.
+10. `UsersPage.tsx` calls `/api/users` to load the list.
+11. Express adds the access token from cookies and proxies to the gateway.
+12. The gateway forwards the call to `user-service`.
+13. Create, update, and delete actions go through the same Express proxy path.
+14. Logout clears cookies in Express and resets the React auth state.

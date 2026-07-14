@@ -15,6 +15,15 @@ paths:
     post:
       tags: [User Service (Routed)]
       summary: Routed to user-service register
+      description: Forwards a registration request to the user-service through the gateway.
+      requestBody:
+        required: true
+        description: Registration payload forwarded to the downstream auth service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from user-service
@@ -26,6 +35,15 @@ paths:
     post:
       tags: [User Service (Routed)]
       summary: Routed to user-service login
+      description: Forwards a login request to the user-service through the gateway.
+      requestBody:
+        required: true
+        description: Login credentials forwarded to the downstream auth service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from user-service
@@ -37,6 +55,15 @@ paths:
     post:
       tags: [User Service (Routed)]
       summary: Routed to user-service token refresh
+      description: Forwards a refresh-token request to the user-service through the gateway.
+      requestBody:
+        required: true
+        description: Refresh token payload forwarded to the downstream auth service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from user-service
@@ -48,6 +75,7 @@ paths:
     get:
       tags: [User Service (Routed)]
       summary: Routed to user-service list users
+      description: Retrieves the full user list from the user-service through the gateway.
       security:
         - bearerAuth: []
       responses:
@@ -60,8 +88,17 @@ paths:
     post:
       tags: [User Service (Routed)]
       summary: Routed to user-service create user
+      description: Creates a user by forwarding the request to the user-service.
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        description: User creation payload forwarded to the downstream user-service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '201':
           description: Forwarded response from user-service
@@ -73,6 +110,7 @@ paths:
     get:
       tags: [User Service (Routed)]
       summary: Routed to user-service get user
+      description: Fetches a single user by ID from the user-service.
       security:
         - bearerAuth: []
       parameters:
@@ -87,10 +125,19 @@ paths:
     put:
       tags: [User Service (Routed)]
       summary: Routed to user-service update user
+      description: Updates an existing user by forwarding the request to the user-service.
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        description: User update payload forwarded to the downstream user-service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from user-service
@@ -101,6 +148,7 @@ paths:
     delete:
       tags: [User Service (Routed)]
       summary: Routed to user-service delete user
+      description: Deletes a user by forwarding the request to the user-service.
       security:
         - bearerAuth: []
       parameters:
@@ -117,6 +165,15 @@ paths:
     post:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system login
+      description: Forwards banking auth login requests to the banking-system service.
+      requestBody:
+        required: true
+        description: Banking login credentials forwarded to the downstream banking auth service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from banking-system
@@ -128,6 +185,15 @@ paths:
     post:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system refresh
+      description: Forwards banking auth refresh requests to the banking-system service.
+      requestBody:
+        required: true
+        description: Banking refresh-token payload forwarded to the downstream banking auth service.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from banking-system
@@ -139,8 +205,17 @@ paths:
     post:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system admin account creation
+      description: Creates a banking account by forwarding the request to the banking-system service.
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        description: Account creation payload forwarded to the downstream banking admin API.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '201':
           description: Forwarded response from banking-system
@@ -152,6 +227,7 @@ paths:
     get:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system my accounts
+      description: Retrieves the authenticated holder's accounts through the gateway.
       security:
         - bearerAuth: []
       responses:
@@ -165,10 +241,19 @@ paths:
     post:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system deposit
+      description: Deposits funds into an account by forwarding the request to the banking-system service.
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        description: Deposit payload forwarded to the downstream banking transaction API.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from banking-system
@@ -180,10 +265,19 @@ paths:
     post:
       tags: [Banking System (Routed)]
       summary: Routed to banking-system withdraw
+      description: Withdraws funds from an account by forwarding the request to the banking-system service.
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        description: Withdrawal payload forwarded to the downstream banking transaction API.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
       responses:
         '200':
           description: Forwarded response from banking-system
@@ -196,6 +290,7 @@ paths:
     get:
       tags: [Gateway Actuator]
       summary: Gateway health endpoint
+      description: Returns the gateway health status.
       responses:
         '200':
           description: Health response
@@ -208,6 +303,7 @@ paths:
     get:
       tags: [Gateway Actuator]
       summary: Gateway info endpoint
+      description: Returns application metadata exposed by the gateway actuator.
       responses:
         '200':
           description: Info response
@@ -220,6 +316,7 @@ paths:
     get:
       tags: [Gateway Actuator]
       summary: Metrics index
+      description: Returns the list of available gateway metrics.
       responses:
         '200':
           description: Metrics response
@@ -232,6 +329,7 @@ paths:
     get:
       tags: [Gateway Actuator]
       summary: Prometheus scrape endpoint
+      description: Exposes gateway metrics in Prometheus text format.
       responses:
         '200':
           description: Prometheus text
@@ -251,6 +349,7 @@ components:
       name: id
       in: path
       required: true
+      description: Numeric user identifier.
       schema:
         type: integer
         format: int64
@@ -258,6 +357,7 @@ components:
       name: accountId
       in: path
       required: true
+      description: Numeric account identifier.
       schema:
         type: integer
         format: int64

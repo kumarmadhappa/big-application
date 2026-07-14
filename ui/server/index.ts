@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
-const userServiceUrl = process.env.USER_SERVICE_URL ?? 'http://localhost:8081';
+const apiGatewayUrl = process.env.API_GATEWAY_URL ?? 'http://localhost:8080';
 const accessCookieName = process.env.ACCESS_COOKIE_NAME ?? 'ui_access_token';
 const refreshCookieName = process.env.REFRESH_COOKIE_NAME ?? 'ui_refresh_token';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -74,7 +74,7 @@ async function handleAuthForward(
   upstreamPath: string,
   extraBody?: Record<string, unknown>
 ) {
-  const upstream = await fetch(`${userServiceUrl}${upstreamPath}`, {
+  const upstream = await fetch(`${apiGatewayUrl}${upstreamPath}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(extraBody ?? req.body ?? {})
@@ -95,7 +95,7 @@ async function handleProxyRequest(req: express.Request, res: express.Response) {
     return;
   }
 
-  const targetUrl = `${userServiceUrl}${req.originalUrl}`;
+  const targetUrl = `${apiGatewayUrl}${req.originalUrl}`;
   const apiResponse = await fetch(targetUrl, {
     method: req.method,
     headers: buildForwardHeaders(req.headers, accessToken),
