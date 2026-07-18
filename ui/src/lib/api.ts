@@ -1,13 +1,24 @@
 import type {
   ApiResponse,
   AuthResponse,
+  BankingAccount,
+  BankingAccountCreatePayload,
+  BankingAccountUpdatePayload,
+  BankingTransactionPayload,
+  BankingTransactionResponse,
   LoginPayload,
+  SessionResponse,
   User,
   UserCreatePayload,
   UserUpdatePayload
 } from '@/types';
 
 async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
+  const method = init?.method ?? 'GET';
+  const target = typeof input === 'string' ? input : input instanceof URL ? input.toString() : String(input);
+
+  console.info(`[api] ${method} ${target}`);
+
   const response = await fetch(input, {
     ...init,
     headers: {
@@ -17,10 +28,20 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
     credentials: 'include'
   });
 
+  console.info(`[api] ${method} ${target} -> ${response.status}`);
+
   const text = await response.text();
-  const body = text ? JSON.parse(text) : null;
+  let body: any = null;
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+  }
   if (!response.ok) {
-    throw new Error(body?.message ?? 'Request failed');
+    console.info(`[api] ${method} ${target} failed`);
+    throw new Error(body?.message ?? text?.trim() ?? response.statusText ?? 'Request failed');
   }
 
   return body as T;
@@ -33,6 +54,13 @@ export async function login(payload: LoginPayload) {
   });
 }
 
+export async function bankingLogin(payload: LoginPayload) {
+  return requestJson<ApiResponse<AuthResponse>>('/api/banking/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function logout() {
   return requestJson<ApiResponse<{ success: boolean }>>('/api/auth/logout', {
     method: 'POST'
@@ -40,11 +68,75 @@ export async function logout() {
 }
 
 export async function fetchSession() {
-  return requestJson<{ authenticated: boolean }>('/api/session');
+  return requestJson<SessionResponse>('/api/session');
 }
 
 export async function fetchUsers() {
   const result = await requestJson<ApiResponse<User[]>>('/api/users');
+  return result.data;
+}
+
+export async function fetchBankingAccounts() {
+  const result = await requestJson<ApiResponse<BankingAccount[]>>('/api/banking/accounts/mine');
+  return result.data;
+}
+
+export async function fetchAdminBankingAccounts() {
+  const result = await requestJson<ApiResponse<BankingAccount[]>>('/api/banking/admin/accounts');
+  return result.data;
+}
+
+export async function createBankingAccount(payload: BankingAccountCreatePayload) {
+  const result = await requestJson<ApiResponse<BankingAccount>>('/api/banking/admin/accounts', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return result.data;
+}
+
+export async function updateBankingAccount(id: number, payload: BankingAccountUpdatePayload) {
+  const result = await requestJson<ApiResponse<BankingAccount>>(`/api/banking/admin/accounts/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+  return result.data;
+}
+
+export async function deleteBankingAccount(id: number) {
+  return requestJson<ApiResponse<null>>(`/api/banking/admin/accounts/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function adminDeposit(accountId: number, payload: BankingTransactionPayload) {
+  const result = await requestJson<ApiResponse<BankingTransactionResponse>>(`/api/banking/admin/accounts/${accountId}/transactions/deposit`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return result.data;
+}
+
+export async function adminWithdraw(accountId: number, payload: BankingTransactionPayload) {
+  const result = await requestJson<ApiResponse<BankingTransactionResponse>>(`/api/banking/admin/accounts/${accountId}/transactions/withdraw`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return result.data;
+}
+
+export async function depositBankingAccount(accountId: number, payload: BankingTransactionPayload) {
+  const result = await requestJson<ApiResponse<BankingTransactionResponse>>(`/api/banking/accounts/${accountId}/transactions/deposit`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return result.data;
+}
+
+export async function withdrawBankingAccount(accountId: number, payload: BankingTransactionPayload) {
+  const result = await requestJson<ApiResponse<BankingTransactionResponse>>(`/api/banking/accounts/${accountId}/transactions/withdraw`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
   return result.data;
 }
 

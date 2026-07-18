@@ -56,3 +56,54 @@ export interface UserUpdatePayload {
   enabled?: boolean;
   roles?: Role[];
 }
+
+export interface BankingAccount {
+  id: number;
+  accountNumber: string;
+  accountSegment: 'CONSUMER' | 'COMMERCIAL';
+  accountType: 'SAVINGS' | 'CREDIT';
+  balance: number;
+  creditLimit: number | null;
+  holderType: 'PERSON' | 'COMPANY';
+  holderName: string;
+  holderUsername: string;
+}
+
+export interface BankingAccountCreatePayload {
+  holderType: 'PERSON' | 'COMPANY';
+  displayName: string;
+  username: string;
+  email: string;
+  password: string;
+  accountSegment: 'CONSUMER' | 'COMMERCIAL';
+  accountType: 'SAVINGS' | 'CREDIT';
+  initialBalance: number;
+  creditLimit?: number | null;
+}
+
+export interface BankingAccountUpdatePayload {
+  displayName: string;
+  accountSegment: 'CONSUMER' | 'COMMERCIAL';
+  accountType: 'SAVINGS' | 'CREDIT';
+  creditLimit?: number | null;
+}
+
+export interface BankingTransactionPayload {
+  amount: number;
+}
+
+export interface BankingTransactionResponse {
+  transactionId: number;
+  accountId: number;
+  accountNumber: string;
+  transactionType: 'DEPOSIT' | 'WITHDRAWAL';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  createdAt: string;
+}
+
+export interface SessionResponse {
+  authenticated: boolean;
+  user?: AuthUser;
+}

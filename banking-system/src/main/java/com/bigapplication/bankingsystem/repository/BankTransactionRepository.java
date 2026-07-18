@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BankTransactionRepository extends JpaRepository<BankTransaction, Long> {
     List<BankTransaction> findTop20ByAccountIdOrderByCreatedAtDesc(Long accountId);
+
+    void deleteByAccountId(Long accountId);
 }

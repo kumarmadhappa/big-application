@@ -51,6 +51,22 @@ paths:
           $ref: '#/components/responses/Error400'
 
   /api/banking/admin/accounts:
+    get:
+      tags: [Banking Admin]
+      summary: List all bank accounts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Accounts fetched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAccountList'
+        '401':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
     post:
       tags: [Banking Admin]
       summary: Create an account holder and bank account
@@ -73,6 +89,105 @@ paths:
           $ref: '#/components/responses/Error400'
         '500':
           $ref: '#/components/responses/Error500'
+
+  /api/banking/admin/accounts/{accountId}:
+    put:
+      tags: [Banking Admin]
+      summary: Update a bank account
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccountRequest'
+      responses:
+        '200':
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAccountResponse'
+        '401':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+    delete:
+      tags: [Banking Admin]
+      summary: Delete a bank account
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+        '401':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+
+  /api/banking/admin/accounts/{accountId}/transactions/deposit:
+    post:
+      tags: [Banking Admin]
+      summary: Deposit into any account as admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTransactionResponse'
+        '401':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
+  /api/banking/admin/accounts/{accountId}/transactions/withdraw:
+    post:
+      tags: [Banking Admin]
+      summary: Withdraw from any account as admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '200':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseTransactionResponse'
+        '401':
+          $ref: '#/components/responses/Error400'
+        '403':
+          $ref: '#/components/responses/Error403'
 
   /api/banking/accounts/mine:
     get:
@@ -260,6 +375,21 @@ components:
           type: number
           format: double
           minimum: 0
+    UpdateAccountRequest:
+      type: object
+      required: [displayName, accountSegment, accountType]
+      properties:
+        displayName:
+          type: string
+          maxLength: 150
+        accountSegment:
+          $ref: '#/components/schemas/AccountSegment'
+        accountType:
+          $ref: '#/components/schemas/AccountType'
+        creditLimit:
+          type: number
+          format: double
+          minimum: 0
     AuthUserResponse:
       type: object
       properties:
@@ -391,4 +521,12 @@ components:
           type: string
         path:
           type: string
-
+    ApiResponseVoid:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          nullable: true

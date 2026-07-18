@@ -13,12 +13,16 @@ import com.bigapplication.bankingsystem.repository.BankTransactionRepository;
 import com.bigapplication.bankingsystem.service.TransactionService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
 public class TransactionServiceImpl implements TransactionService {
+
+    private static final Logger log = LoggerFactory.getLogger(TransactionServiceImpl.class);
 
     private final BankAccountRepository accountRepository;
     private final BankTransactionRepository transactionRepository;
@@ -34,14 +38,21 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionResponse deposit(Long accountId, BigDecimal amount, String actorUsername) {
-        BankAccount account = findOwnedAccount(accountId, actorUsername);
+        return deposit(accountId, amount, actorUsername, false);
+    }
+
+    @Override
+    public TransactionResponse deposit(Long accountId, BigDecimal amount, String actorUsername, boolean allowAnyAccount) {
+        log.info("Processing deposit accountId={} username={} amount={} allowAnyAccount={}",
+                accountId, actorUsername, amount, allowAnyAccount);
+        BankAccount account = findAccount(accountId, actorUsername, allowAnyAccount);
         BigDecimal normalizedAmount = normalizePositiveAmount(amount);
         BigDecimal before = account.getBalance();
         BigDecimal after = before.add(normalizedAmount);
         account.setBalance(after);
         accountRepository.save(account);
 
-        return mapper.toTransactionResponse(transactionRepository.save(BankTransaction.builder()
+        TransactionResponse response = mapper.toTransactionResponse(transactionRepository.save(BankTransaction.builder()
                 .account(account)
                 .transactionType(TransactionType.DEPOSIT)
                 .amount(normalizedAmount)
@@ -49,11 +60,21 @@ public class TransactionServiceImpl implements TransactionService {
                 .balanceAfter(after)
                 .performedBy(actorUsername)
                 .build()));
+        log.info("Deposit completed transactionId={} accountId={} balanceAfter={}",
+                response.getTransactionId(), accountId, response.getBalanceAfter());
+        return response;
     }
 
     @Override
     public TransactionResponse withdraw(Long accountId, BigDecimal amount, String actorUsername) {
-        BankAccount account = findOwnedAccount(accountId, actorUsername);
+        return withdraw(accountId, amount, actorUsername, false);
+    }
+
+    @Override
+    public TransactionResponse withdraw(Long accountId, BigDecimal amount, String actorUsername, boolean allowAnyAccount) {
+        log.info("Processing withdrawal accountId={} username={} amount={} allowAnyAccount={}",
+                accountId, actorUsername, amount, allowAnyAccount);
+        BankAccount account = findAccount(accountId, actorUsername, allowAnyAccount);
         BigDecimal normalizedAmount = normalizePositiveAmount(amount);
         BigDecimal before = account.getBalance();
         BigDecimal after = before.subtract(normalizedAmount);
@@ -71,7 +92,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         account.setBalance(after);
         accountRepository.save(account);
-        return mapper.toTransactionResponse(transactionRepository.save(BankTransaction.builder()
+        TransactionResponse response = mapper.toTransactionResponse(transactionRepository.save(BankTransaction.builder()
                 .account(account)
                 .transactionType(TransactionType.WITHDRAWAL)
                 .amount(normalizedAmount)
@@ -79,13 +100,18 @@ public class TransactionServiceImpl implements TransactionService {
                 .balanceAfter(after)
                 .performedBy(actorUsername)
                 .build()));
+        log.info("Withdrawal completed transactionId={} accountId={} balanceAfter={}",
+                response.getTransactionId(), accountId, response.getBalanceAfter());
+        return response;
     }
 
-    private BankAccount findOwnedAccount(Long accountId, String actorUsername) {
+    private BankAccount findAccount(Long accountId, String actorUsername, boolean allowAnyAccount) {
         BankAccount account = accountRepository.findLockedById(accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
         String ownerUsername = account.getHolder().getUser().getUsername();
-        if (!ownerUsername.equals(actorUsername)) {
+        if (!allowAnyAccount && !ownerUsername.equals(actorUsername)) {
+            log.warn("Unauthorized banking account access attempt accountId={} actor={} owner={}",
+                    accountId, actorUsername, ownerUsername);
             throw new BusinessRuleException("You are not allowed to perform operations on this account");
         }
         return account;

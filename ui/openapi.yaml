@@ -9,6 +9,7 @@ tags:
   - name: Session
   - name: Auth Proxy
   - name: Users Proxy
+  - name: Banking Proxy
   - name: Health
 paths:
   /api/session:
@@ -96,6 +97,43 @@ paths:
                 properties:
                   success:
                     type: boolean
+
+  /api/banking/auth/login:
+    post:
+      tags: [Banking Proxy]
+      summary: Proxy login to banking-system and set auth cookies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+  /api/banking/auth/refresh:
+    post:
+      tags: [Banking Proxy]
+      summary: Proxy refresh to banking-system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
 
   /api/users:
     get:
@@ -191,6 +229,22 @@ paths:
         '401':
           $ref: '#/components/responses/Error401'
 
+  /api/banking/accounts/mine:
+    get:
+      tags: [Banking Proxy]
+      summary: Proxy fetch-banking-accounts request
+      security:
+        - accessTokenCookie: []
+      responses:
+        '200':
+          description: Forwarded response from banking-system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassThroughResponse'
+        '401':
+          $ref: '#/components/responses/Error401'
+
   /healthz:
     get:
       tags: [Health]
@@ -233,6 +287,8 @@ components:
       properties:
         authenticated:
           type: boolean
+        user:
+          $ref: '#/components/schemas/AuthUser'
     SimpleError:
       type: object
       properties:
@@ -244,3 +300,14 @@ components:
       type: object
       description: Response payload returned by user-service and proxied unchanged.
       additionalProperties: true
+    AuthUser:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string

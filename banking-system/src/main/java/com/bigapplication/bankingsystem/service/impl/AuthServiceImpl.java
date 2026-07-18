@@ -10,6 +10,8 @@ import com.bigapplication.bankingsystem.security.JwtService;
 import com.bigapplication.bankingsystem.security.UserPrincipal;
 import com.bigapplication.bankingsystem.service.AuthService;
 import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class AuthServiceImpl implements AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     private final BankUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -31,11 +35,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
+        log.info("Authenticating banking login={}", request.getLogin());
         BankUser user = userRepository.findByUsernameOrEmail(request.getLogin(), request.getLogin())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid username/email or password"));
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Banking authentication failed for login={}", request.getLogin());
             throw new InvalidCredentialsException("Invalid username/email or password");
         }
+        log.info("Banking authentication succeeded for username={}", user.getUsername());
         return buildAuthResponse(user);
     }
 
@@ -43,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(readOnly = true)
     public AuthResponse refresh(RefreshTokenRequest request) {
         try {
+            log.info("Refreshing banking JWT");
             String username = jwtService.extractSubject(request.getRefreshToken());
             if (!jwtService.isTokenType(request.getRefreshToken(), "refresh")) {
                 throw new InvalidCredentialsException("Invalid refresh token");
@@ -52,8 +60,10 @@ public class AuthServiceImpl implements AuthService {
             if (!jwtService.isTokenValid(request.getRefreshToken(), user.getUsername())) {
                 throw new InvalidCredentialsException("Invalid refresh token");
             }
+            log.info("Banking token refresh succeeded for username={}", username);
             return buildAuthResponse(user);
         } catch (JwtException ex) {
+            log.warn("Banking refresh token parsing failed", ex);
             throw new InvalidCredentialsException("Invalid refresh token");
         }
     }

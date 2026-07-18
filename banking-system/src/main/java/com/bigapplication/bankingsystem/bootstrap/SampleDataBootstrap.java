@@ -24,6 +24,7 @@ public class SampleDataBootstrap {
     @Bean
     ApplicationRunner seedSampleAccounts(AdminService adminService, BankAccountRepository accountRepository) {
         return args -> {
+            log.info("Checking sample banking data bootstrap");
             if (accountRepository.count() > 0) {
                 log.info("Sample banking data already present; skipping seed");
                 return;

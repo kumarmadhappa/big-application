@@ -40,6 +40,11 @@
     </appender>
 
     <logger name="com.bigapplication.bankingsystem" level="INFO"/>
+    <logger name="com.bigapplication.bankingsystem.security.JwtAuthenticationFilter" level="DEBUG"/>
+    <logger name="com.bigapplication.bankingsystem.controller.AuthController" level="INFO"/>
+    <logger name="com.bigapplication.bankingsystem.controller.AdminController" level="INFO"/>
+    <logger name="com.bigapplication.bankingsystem.controller.AccountController" level="INFO"/>
+    <logger name="com.bigapplication.bankingsystem.controller.TransactionController" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

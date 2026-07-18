@@ -24,6 +24,7 @@ public class AdminBootstrap {
                                          PasswordEncoder passwordEncoder,
                                          AdminProperties adminProperties) {
         return args -> {
+            log.info("Checking default bank admin bootstrap username={}", adminProperties.getUsername());
             if (userRepository.findByUsername(adminProperties.getUsername()).isPresent()) {
                 log.info("Default Bank Admin data already present; skipping seed");
                 return;

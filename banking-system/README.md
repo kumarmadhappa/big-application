@@ -40,6 +40,11 @@ Auth:
 Admin:
 
 - `POST /api/banking/admin/accounts` (admin only)
+- `GET /api/banking/admin/accounts` (admin only)
+- `PUT /api/banking/admin/accounts/{accountId}` (admin only)
+- `DELETE /api/banking/admin/accounts/{accountId}` (admin only)
+- `POST /api/banking/admin/accounts/{accountId}/transactions/deposit` (admin only)
+- `POST /api/banking/admin/accounts/{accountId}/transactions/withdraw` (admin only)
 
 Account holder:
 

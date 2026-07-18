@@ -2,17 +2,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { LoginForm } from '@/components/LoginForm';
 
-export function LoginPage() {
+export function BankingLoginPage() {
   const auth = useAuth();
   const navigate = useNavigate();
+
   return (
     <LoginForm
-      title="Sign in to User Service"
-      description="Enter your user-service credentials to manage users."
+      title="Sign in to Banking System"
+      description="Enter your banking credentials to open the banking application."
       submitLabel="Sign in"
       onSubmit={async (payload) => {
-        await auth.login(payload);
-        navigate('/users');
+        await auth.bankingLogin(payload);
+        navigate('/banking');
       }}
     />
   );

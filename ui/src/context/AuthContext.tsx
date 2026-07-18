@@ -1,5 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { fetchSession, login as loginRequest, logout as logoutRequest } from '@/lib/api';
+import {
+  bankingLogin as bankingLoginRequest,
+  fetchSession,
+  login as loginRequest,
+  logout as logoutRequest
+} from '@/lib/api';
 import type { AuthResponse, LoginPayload } from '@/types';
 import type { ReactNode } from 'react';
 
@@ -8,6 +13,7 @@ type AuthContextValue = {
   loading: boolean;
   user?: AuthResponse['user'];
   login: (payload: LoginPayload) => Promise<void>;
+  bankingLogin: (payload: LoginPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -24,7 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const session = await fetchSession();
       setAuthenticated(session.authenticated);
-      if (!session.authenticated) {
+      if (session.authenticated) {
+        setUser(session.user);
+      } else {
         setUser(undefined);
       }
     } finally {
@@ -42,6 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.data.user);
   }, []);
 
+  const bankingLogin = useCallback(async (payload: LoginPayload) => {
+    const response = await bankingLoginRequest(payload);
+    setAuthenticated(true);
+    setUser(response.data.user);
+  }, []);
+
   const logout = useCallback(async () => {
     await logoutRequest();
     setAuthenticated(false);
@@ -53,9 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     user,
     login,
+    bankingLogin,
     logout,
     refreshSession
-  }), [authenticated, loading, user, login, logout, refreshSession]);
+  }), [authenticated, loading, user, login, bankingLogin, logout, refreshSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

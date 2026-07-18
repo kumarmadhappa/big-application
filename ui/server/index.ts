@@ -18,7 +18,9 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.get('/api/session', async (req, res) => {
-  res.json({ authenticated: Boolean(req.cookies[accessCookieName]) });
+  const accessToken = req.cookies[accessCookieName];
+  const user = accessToken ? decodeJwtUser(accessToken) : undefined;
+  res.json({ authenticated: Boolean(accessToken), user });
 });
 
 app.post('/api/auth/register', async (req, res) => {
@@ -27,6 +29,10 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   await handleAuthForward(req, res, '/api/auth/login');
+});
+
+app.post('/api/banking/auth/login', async (req, res) => {
+  await handleAuthForward(req, res, '/api/banking/auth/login');
 });
 
 app.post('/api/auth/refresh', async (req, res) => {
@@ -39,12 +45,26 @@ app.post('/api/auth/refresh', async (req, res) => {
   await handleAuthForward(req, res, '/api/auth/refresh', { refreshToken });
 });
 
+app.post('/api/banking/auth/refresh', async (req, res) => {
+  const refreshToken = req.cookies[refreshCookieName];
+  if (!refreshToken) {
+    res.status(401).json({ success: false, message: 'Missing refresh token' });
+    return;
+  }
+
+  await handleAuthForward(req, res, '/api/banking/auth/refresh', { refreshToken });
+});
+
 app.post('/api/auth/logout', (req, res) => {
   clearAuthCookies(res);
   res.json({ success: true });
 });
 
 app.use('/api/users', async (req, res) => {
+  await handleProxyRequest(req, res);
+});
+
+app.use('/api/banking', async (req, res) => {
   await handleProxyRequest(req, res);
 });
 
@@ -74,15 +94,25 @@ async function handleAuthForward(
   upstreamPath: string,
   extraBody?: Record<string, unknown>
 ) {
+  console.info(`Forwarding ${req.method} ${req.originalUrl} -> ${upstreamPath}`);
   const upstream = await fetch(`${apiGatewayUrl}${upstreamPath}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(extraBody ?? req.body ?? {})
   });
 
-  const payload = await readJson(upstream);
-  if (upstream.ok && payload?.data?.accessToken && payload?.data?.refreshToken) {
-    setAuthCookies(res, payload.data.accessToken, payload.data.refreshToken);
+  const payload = await readUpstreamBody(upstream);
+  console.info(`Upstream ${upstreamPath} returned ${upstream.status}`);
+  if (upstream.ok && typeof payload === 'object' && payload !== null && 'data' in payload) {
+    const data = (payload as { data?: { accessToken?: string; refreshToken?: string } }).data;
+    if (data?.accessToken && data?.refreshToken) {
+      setAuthCookies(res, data.accessToken, data.refreshToken);
+    }
+  }
+
+  if (typeof payload === 'string') {
+    res.status(upstream.status).type(upstream.headers.get('content-type') ?? 'text/plain').send(payload);
+    return;
   }
 
   res.status(upstream.status).json(payload);
@@ -96,6 +126,7 @@ async function handleProxyRequest(req: express.Request, res: express.Response) {
   }
 
   const targetUrl = `${apiGatewayUrl}${req.originalUrl}`;
+  console.info(`Proxying ${req.method} ${req.originalUrl} -> ${targetUrl}`);
   const apiResponse = await fetch(targetUrl, {
     method: req.method,
     headers: buildForwardHeaders(req.headers, accessToken),
@@ -127,9 +158,22 @@ async function writeUpstreamResponse(res: Response, upstream: globalThis.Respons
   res.send(text);
 }
 
-async function readJson(upstream: globalThis.Response) {
+async function readUpstreamBody(upstream: globalThis.Response) {
   const text = await upstream.text();
-  return text ? JSON.parse(text) : null;
+  if (!text) {
+    return null;
+  }
+
+  const contentType = upstream.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
+  return text;
 }
 
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
@@ -147,4 +191,31 @@ function setAuthCookies(res: Response, accessToken: string, refreshToken: string
 function clearAuthCookies(res: Response) {
   res.clearCookie(accessCookieName, { path: '/' });
   res.clearCookie(refreshCookieName, { path: '/' });
+}
+
+function decodeJwtUser(token: string) {
+  const parts = token.split('.');
+  if (parts.length < 2) {
+    return undefined;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
+      sub?: string;
+      roles?: string[];
+      email?: string;
+    };
+
+    if (!payload.sub) {
+      return undefined;
+    }
+
+    return {
+      username: payload.sub,
+      email: payload.email ?? '',
+      roles: Array.isArray(payload.roles) ? payload.roles : []
+    };
+  } catch {
+    return undefined;
+  }
 }
