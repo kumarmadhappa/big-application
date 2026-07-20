@@ -6,8 +6,8 @@ Distributed Spring Boot microservices applications.
 
 - [`user-service`](user-service/README.md) - user CRUD, JWT auth, persistence, and observability
 - [`api-gateway`](api-gateway/README.md) - JWT validation, routing, rate limiting, and observability
-- [`banking-system`](banking-system/README.md) - banking admin/account holder flows and transactions
-- [`ui`](ui/README.md) - React + Express UI for user management
+- [`banking-system`](banking-system/README.md) - banking admin/account holder flows, account search, and transactions
+- [`ui`](ui/README.md) - React + Express UI for user management and banking workflows
 
 ## Service documentation
 

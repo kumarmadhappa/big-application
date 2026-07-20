@@ -19,7 +19,9 @@ import com.bigapplication.bankingsystem.repository.BankTransactionRepository;
 import com.bigapplication.bankingsystem.service.AdminService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
@@ -102,6 +104,35 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<AccountResponse> searchAccounts(String name, String accountNumber, Long accountId) {
+        String normalizedName = normalizeSearchText(name);
+        String normalizedAccountNumber = normalizeSearchText(accountNumber);
+        if (normalizedName == null && normalizedAccountNumber == null && accountId == null) {
+            log.info("Skipping admin account search because no search criteria were provided");
+            return List.of();
+        }
+
+        log.info("Searching banking accounts for admin view name={} accountNumber={} accountId={}",
+                normalizedName, normalizedAccountNumber, accountId);
+        Map<Long, BankAccount> matches = new LinkedHashMap<>();
+        if (accountId != null) {
+            accountRepository.findById(accountId).ifPresent(account -> matches.put(account.getId(), account));
+        }
+        if (normalizedAccountNumber != null) {
+            accountRepository.findByAccountNumberContainingIgnoreCaseOrderByIdAsc(normalizedAccountNumber)
+                    .forEach(account -> matches.putIfAbsent(account.getId(), account));
+        }
+        if (normalizedName != null) {
+            accountRepository.findByHolderDisplayNameContainingIgnoreCaseOrderByIdAsc(normalizedName)
+                    .forEach(account -> matches.putIfAbsent(account.getId(), account));
+        }
+        return matches.values().stream()
+                .map(mapper::toAccountResponse)
+                .toList();
+    }
+
+    @Override
     public AccountResponse updateAccount(Long accountId, UpdateAccountRequest request) {
         log.info("Updating banking account id={} displayName={} type={} segment={}",
                 accountId, request.getDisplayName(), request.getAccountType(), request.getAccountSegment());
@@ -136,6 +167,13 @@ public class AdminServiceImpl implements AdminService {
     private void validateAccountRules(CreateAccountRequest request) {
         validateAccountRules(request.getAccountType(), normalize(request.getInitialBalance()),
                 request.getCreditLimit() == null ? null : normalize(request.getCreditLimit()));
+    }
+
+    private String normalizeSearchText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private void validateAccountRules(AccountType accountType, BigDecimal balance, BigDecimal creditLimit) {

@@ -1,6 +1,6 @@
 # UI
 
-React + Express + Tailwind CSS frontend for user management.
+React + Express + Tailwind CSS frontend for user management and banking workflows.
 
 ## Overview
 
@@ -10,6 +10,7 @@ React + Express + Tailwind CSS frontend for user management.
 - login with JWT stored in HTTP-only cookies
 - user list
 - banking admin and holder dashboards
+- banking admin account search by name, account number, or account ID
 - create/edit/delete user screens
 - Express backend-for-frontend proxy to the API gateway
 
@@ -45,7 +46,7 @@ npm run start
 
 - login and refresh go through Express and then the API gateway
 - user CRUD requests are proxied to the API gateway
-- banking login and account requests are proxied to the API gateway
+- banking login, account search, account management, and transaction requests are proxied to the API gateway
 - JWTs are kept in HTTP-only cookies
 
 ## OpenAPI specification
@@ -66,7 +67,7 @@ npm run start
 10. Express stores JWTs in HTTP-only cookies and returns the auth response.
 11. `UsersPage.tsx` calls `/api/users` to load the list.
 12. `BankingLandingPage.tsx` redirects admins to `/banking/admin` and holders to `/banking/holder`.
-13. `BankingAdminPage.tsx` manages any account and can call admin transactions.
+13. `BankingAdminPage.tsx` requires admins to search by holder name, account number, or account ID before account rows are loaded.
 14. `BankingHolderPage.tsx` manages only the signed-in holder's accounts.
 15. Express adds the access token from cookies and proxies to the gateway.
 16. The gateway forwards the call to `user-service` or `banking-system`.

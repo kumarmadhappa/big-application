@@ -81,6 +81,12 @@ export interface BankingAccountCreatePayload {
   creditLimit?: number | null;
 }
 
+export interface BankingAccountSearchParams {
+  name?: string;
+  accountNumber?: string;
+  accountId?: string;
+}
+
 export interface BankingAccountUpdatePayload {
   displayName: string;
   accountSegment: 'CONSUMER' | 'COMMERCIAL';

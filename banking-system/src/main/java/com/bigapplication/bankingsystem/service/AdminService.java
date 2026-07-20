@@ -8,6 +8,7 @@ import java.util.List;
 public interface AdminService {
     AccountResponse createAccount(CreateAccountRequest request);
     List<AccountResponse> getAllAccounts();
+    List<AccountResponse> searchAccounts(String name, String accountNumber, Long accountId);
     AccountResponse updateAccount(Long accountId, UpdateAccountRequest request);
     void deleteAccount(Long accountId);
 }

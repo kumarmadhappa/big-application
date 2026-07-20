@@ -13,6 +13,10 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, Long> 
 
     List<BankAccount> findByHolderId(Long holderId);
 
+    List<BankAccount> findByAccountNumberContainingIgnoreCaseOrderByIdAsc(String accountNumber);
+
+    List<BankAccount> findByHolderDisplayNameContainingIgnoreCaseOrderByIdAsc(String holderName);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<BankAccount> findLockedById(Long id);
 }

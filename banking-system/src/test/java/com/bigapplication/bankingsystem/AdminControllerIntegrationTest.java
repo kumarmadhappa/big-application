@@ -1,12 +1,12 @@
 package com.bigapplication.bankingsystem;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -45,7 +45,7 @@ class AdminControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void adminCanListUpdateDeleteAndTransactOnAnyAccount() throws Exception {
         String adminToken = loginAndGetAccessToken("bank_admin", "Admin@123");
-        Long accountId = createAccount(adminToken, "ops_holder", "ops@example.com", "Operations Holder");
+        Long accountId = createAccount(adminToken, "ops_holder", "ops@example.com", "Operations Holder").id();
 
         mockMvc.perform(get("/api/banking/admin/accounts")
                         .header("Authorization", "Bearer " + adminToken))
@@ -88,6 +88,39 @@ class AdminControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void adminCanSearchAccountsByNameAccountNumberOrAccountId() throws Exception {
+        String adminToken = loginAndGetAccessToken("bank_admin", "Admin@123");
+        CreatedAccount alphaAccount = createAccount(adminToken, "alpha_holder", "alpha@example.com", "Alpha Holder");
+        CreatedAccount betaAccount = createAccount(adminToken, "beta_holder", "beta@example.com", "Beta Holder");
+
+        mockMvc.perform(get("/api/banking/admin/accounts/search")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("name", "alpha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].holderUsername").value("alpha_holder"));
+
+        mockMvc.perform(get("/api/banking/admin/accounts/search")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("accountNumber", betaAccount.accountNumber()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].holderUsername").value("beta_holder"));
+
+        mockMvc.perform(get("/api/banking/admin/accounts/search")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("accountId", alphaAccount.id().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].holderUsername").value("alpha_holder"));
+
+        mockMvc.perform(get("/api/banking/admin/accounts/search")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
     void nonAdminCannotCreateAccount() throws Exception {
         String adminToken = loginAndGetAccessToken("bank_admin", "Admin@123");
 
@@ -117,7 +150,7 @@ class AdminControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private Long createAccount(String adminToken, String username, String email, String displayName) throws Exception {
+    private CreatedAccount createAccount(String adminToken, String username, String email, String displayName) throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of(
                 "holderType", "PERSON",
                 "displayName", displayName,
@@ -137,9 +170,10 @@ class AdminControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
 
-        return objectMapper.readTree(result.getResponse().getContentAsString())
-                .path("data")
-                .path("id")
-                .asLong();
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        return new CreatedAccount(data.path("id").asLong(), data.path("accountNumber").asText());
+    }
+
+    private record CreatedAccount(Long id, String accountNumber) {
     }
 }

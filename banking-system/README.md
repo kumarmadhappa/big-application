@@ -8,6 +8,7 @@ Banking service with admin-managed account creation and account-holder transacti
 
 - bank admin login
 - admin account creation for person/company holders
+- admin account search by holder name, account number, or account ID
 - consumer/commercial account segments
 - savings/credit account types
 - holder login and balance operations (deposit/withdraw)
@@ -41,10 +42,13 @@ Admin:
 
 - `POST /api/banking/admin/accounts` (admin only)
 - `GET /api/banking/admin/accounts` (admin only)
+- `GET /api/banking/admin/accounts/search?name={name}&accountNumber={accountNumber}&accountId={accountId}` (admin only)
 - `PUT /api/banking/admin/accounts/{accountId}` (admin only)
 - `DELETE /api/banking/admin/accounts/{accountId}` (admin only)
 - `POST /api/banking/admin/accounts/{accountId}/transactions/deposit` (admin only)
 - `POST /api/banking/admin/accounts/{accountId}/transactions/withdraw` (admin only)
+
+The admin UI uses the search endpoint instead of loading every account when the page opens. Search parameters are optional, but at least one of `name`, `accountNumber`, or `accountId` should be supplied for useful results. Empty search criteria return an empty list.
 
 Account holder:
 

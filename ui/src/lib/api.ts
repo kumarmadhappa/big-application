@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   BankingAccount,
   BankingAccountCreatePayload,
+  BankingAccountSearchParams,
   BankingAccountUpdatePayload,
   BankingTransactionPayload,
   BankingTransactionResponse,
@@ -83,6 +84,24 @@ export async function fetchBankingAccounts() {
 
 export async function fetchAdminBankingAccounts() {
   const result = await requestJson<ApiResponse<BankingAccount[]>>('/api/banking/admin/accounts');
+  return result.data;
+}
+
+export async function searchAdminBankingAccounts(params: BankingAccountSearchParams) {
+  const searchParams = new URLSearchParams();
+  if (params.name?.trim()) {
+    searchParams.set('name', params.name.trim());
+  }
+  if (params.accountNumber?.trim()) {
+    searchParams.set('accountNumber', params.accountNumber.trim());
+  }
+  if (params.accountId?.trim()) {
+    searchParams.set('accountId', params.accountId.trim());
+  }
+  const queryString = searchParams.toString();
+  const result = await requestJson<ApiResponse<BankingAccount[]>>(
+    `/api/banking/admin/accounts/search${queryString ? `?${queryString}` : ''}`
+  );
   return result.data;
 }
 

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -56,6 +57,20 @@ public class AdminController {
                 .success(true)
                 .message("Accounts fetched successfully")
                 .data(adminService.getAllAccounts())
+                .build());
+    }
+
+    @GetMapping("/accounts/search")
+    public ResponseEntity<ApiResponse<List<AccountResponse>>> searchAccounts(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String accountNumber,
+            @RequestParam(required = false) Long accountId) {
+        log.info("Banking admin account search request received name={} accountNumber={} accountId={}",
+                name, accountNumber, accountId);
+        return ResponseEntity.ok(ApiResponse.<List<AccountResponse>>builder()
+                .success(true)
+                .message("Accounts fetched successfully")
+                .data(adminService.searchAccounts(name, accountNumber, accountId))
                 .build());
     }
 

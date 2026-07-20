@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -6,17 +6,19 @@ import {
   adminWithdraw,
   createBankingAccount,
   deleteBankingAccount,
-  fetchAdminBankingAccounts,
+  searchAdminBankingAccounts,
   updateBankingAccount
 } from '@/lib/api';
 import type {
   BankingAccount,
   BankingAccountCreatePayload,
+  BankingAccountSearchParams,
   BankingAccountUpdatePayload,
   BankingTransactionPayload
 } from '@/types';
 
 type CreateForm = BankingAccountCreatePayload;
+type SearchForm = Required<BankingAccountSearchParams>;
 type UpdateForm = BankingAccountUpdatePayload & { id: number | null };
 type TransactionForm = BankingTransactionPayload & { accountNumber: string };
 
@@ -30,6 +32,12 @@ const emptyCreateForm = (): CreateForm => ({
   accountType: 'SAVINGS',
   initialBalance: 0,
   creditLimit: 0
+});
+
+const emptySearchForm = (): SearchForm => ({
+  name: '',
+  accountNumber: '',
+  accountId: ''
 });
 
 const emptyUpdateForm = (): UpdateForm => ({
@@ -49,16 +57,14 @@ export function BankingAdminPage() {
   const auth = useAuth();
   const isAdmin = useMemo(() => auth.user?.roles.includes('ADMIN'), [auth.user]);
   const [accounts, setAccounts] = useState<BankingAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [searchForm, setSearchForm] = useState<SearchForm>(emptySearchForm());
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm());
   const [updateForm, setUpdateForm] = useState<UpdateForm>(emptyUpdateForm());
   const [transactionForm, setTransactionForm] = useState<TransactionForm>(emptyTransactionForm());
-
-  useEffect(() => {
-    void loadAccounts();
-  }, []);
 
   if (auth.loading) {
     return <p className="text-slate-400">Loading banking session...</p>;
@@ -72,16 +78,44 @@ export function BankingAdminPage() {
     return <Navigate to="/banking/holder" replace />;
   }
 
-  async function loadAccounts() {
+  function hasSearchCriteria(form: SearchForm) {
+    return Boolean(form.name.trim() || form.accountNumber.trim() || form.accountId.trim());
+  }
+
+  async function searchAccounts(form: SearchForm = searchForm, requireCriteria = true) {
+    if (requireCriteria && !hasSearchCriteria(form)) {
+      setError('Enter a name, account number, or account ID to search');
+      return;
+    }
     setLoading(true);
     setError('');
+    setAccounts([]);
+    setSearched(true);
     try {
-      setAccounts(await fetchAdminBankingAccounts());
+      setAccounts(await searchAdminBankingAccounts(form));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load banking accounts');
+      setError(err instanceof Error ? err.message : 'Unable to search banking accounts');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function refreshSearchResults() {
+    if (searched && hasSearchCriteria(searchForm)) {
+      await searchAccounts(searchForm, false);
+    }
+  }
+
+  function clearSearch() {
+    setSearchForm(emptySearchForm());
+    setAccounts([]);
+    setSearched(false);
+    setError('');
+  }
+
+  async function handleSearch(event: FormEvent) {
+    event.preventDefault();
+    await searchAccounts();
   }
 
   async function handleCreate(event: FormEvent) {
@@ -91,7 +125,7 @@ export function BankingAdminPage() {
     try {
       await createBankingAccount(createForm);
       setCreateForm(emptyCreateForm());
-      await loadAccounts();
+      await refreshSearchResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create account');
     } finally {
@@ -109,7 +143,7 @@ export function BankingAdminPage() {
     try {
       await updateBankingAccount(updateForm.id, updateForm);
       setUpdateForm(emptyUpdateForm());
-      await loadAccounts();
+      await refreshSearchResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to update account');
     } finally {
@@ -124,7 +158,7 @@ export function BankingAdminPage() {
     setError('');
     try {
       await deleteBankingAccount(accountId);
-      await loadAccounts();
+      await refreshSearchResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete account');
     }
@@ -133,7 +167,7 @@ export function BankingAdminPage() {
   async function handleTransaction(action: 'DEPOSIT' | 'WITHDRAWAL') {
     const selectedAccount = accounts.find((account) => account.accountNumber === transactionForm.accountNumber);
     if (!selectedAccount) {
-      setError('Select a valid account number');
+      setError('Select an account from the search results before transacting');
       return;
     }
     setSaving(true);
@@ -146,7 +180,7 @@ export function BankingAdminPage() {
         await adminWithdraw(selectedAccount.id, payload);
       }
       setTransactionForm(emptyTransactionForm());
-      await loadAccounts();
+      await refreshSearchResults();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to process transaction');
     } finally {
@@ -160,24 +194,35 @@ export function BankingAdminPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">Banking Admin</h2>
-            <p className="text-sm text-slate-400">Create, update, delete, and transact on any account.</p>
+            <p className="text-sm text-slate-400">Search by name, account number, or account ID before managing accounts.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadAccounts()}
-            className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800"
-          >
-            Refresh
-          </button>
         </div>
+        <form onSubmit={handleSearch} className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
+          <Field label="Name" value={searchForm.name} onChange={(value) => setSearchForm({ ...searchForm, name: value })} />
+          <Field label="Account Number" value={searchForm.accountNumber} onChange={(value) => setSearchForm({ ...searchForm, accountNumber: value })} />
+          <Field label="Account ID" value={searchForm.accountId} type="number" onChange={(value) => setSearchForm({ ...searchForm, accountId: value })} />
+          <div className="flex gap-3">
+            <button disabled={loading} className="rounded-lg bg-cyan-500 px-4 py-2 font-medium text-slate-950 hover:bg-cyan-400 disabled:opacity-60">
+              {loading ? 'Searching...' : 'Search'}
+            </button>
+            <button type="button" onClick={clearSearch} className="rounded-lg border border-slate-700 px-4 py-2 text-slate-200 hover:bg-slate-800">
+              Clear
+            </button>
+          </div>
+        </form>
         {error && <p className="mt-4 rounded-lg bg-red-950/70 px-3 py-2 text-sm text-red-200">{error}</p>}
         {loading ? (
-          <p className="mt-4 text-slate-400">Loading accounts...</p>
+          <p className="mt-4 text-slate-400">Searching accounts...</p>
+        ) : !searched ? (
+          <p className="mt-4 text-slate-400">Enter search criteria to find accounts.</p>
+        ) : accounts.length === 0 ? (
+          <p className="mt-4 text-slate-400">No accounts matched your search.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-slate-400">
                 <tr>
+                  <th className="py-2">ID</th>
                   <th className="py-2">Account</th>
                   <th className="py-2">Type</th>
                   <th className="py-2">Balance</th>
@@ -188,6 +233,7 @@ export function BankingAdminPage() {
               <tbody>
                 {accounts.map((account) => (
                   <tr key={account.id} className="border-t border-slate-800">
+                    <td className="py-3">{account.id}</td>
                     <td className="py-3">{account.accountNumber}</td>
                     <td className="py-3">{account.accountSegment} / {account.accountType}</td>
                     <td className="py-3">
