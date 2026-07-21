@@ -21,6 +21,15 @@ type CreateForm = BankingAccountCreatePayload;
 type SearchForm = Required<BankingAccountSearchParams>;
 type UpdateForm = BankingAccountUpdatePayload & { id: number | null };
 type TransactionForm = BankingTransactionPayload & { accountNumber: string };
+type AdminModule = 'search' | 'create' | 'update' | 'transactions';
+type UiMessage = { type: 'error' | 'success'; text: string } | null;
+
+const adminModules: Array<{ id: AdminModule; label: string; description: string }> = [
+  { id: 'search', label: 'Search accounts', description: 'Find and manage existing accounts' },
+  { id: 'create', label: 'Create account', description: 'Open a new banking account' },
+  { id: 'update', label: 'Update account', description: 'Edit the selected account' },
+  { id: 'transactions', label: 'Transactions', description: 'Deposit or withdraw funds' }
+];
 
 const emptyCreateForm = (): CreateForm => ({
   holderType: 'PERSON',
@@ -53,14 +62,19 @@ const emptyTransactionForm = (): TransactionForm => ({
   amount: 0
 });
 
+function formatAccountDetails(account: BankingAccount) {
+  return `${account.accountNumber} (ID ${account.id}, holder ${account.holderName}, ${account.accountSegment} ${account.accountType}, balance ${account.balance.toFixed(2)})`;
+}
+
 export function BankingAdminPage() {
   const auth = useAuth();
   const isAdmin = useMemo(() => auth.user?.roles.includes('ADMIN'), [auth.user]);
   const [accounts, setAccounts] = useState<BankingAccount[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState<UiMessage>(null);
   const [saving, setSaving] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [activeModule, setActiveModule] = useState<AdminModule>('search');
   const [searchForm, setSearchForm] = useState<SearchForm>(emptySearchForm());
   const [createForm, setCreateForm] = useState<CreateForm>(emptyCreateForm());
   const [updateForm, setUpdateForm] = useState<UpdateForm>(emptyUpdateForm());
@@ -82,19 +96,33 @@ export function BankingAdminPage() {
     return Boolean(form.name.trim() || form.accountNumber.trim() || form.accountId.trim());
   }
 
-  async function searchAccounts(form: SearchForm = searchForm, requireCriteria = true) {
+  function showMessage(type: 'error' | 'success', text: string) {
+    setMessage({ type, text });
+  }
+
+  function clearMessage() {
+    setMessage(null);
+  }
+
+  async function searchAccounts(form: SearchForm = searchForm, requireCriteria = true, showSearchSuccess = true) {
     if (requireCriteria && !hasSearchCriteria(form)) {
-      setError('Enter a name, account number, or account ID to search');
-      return;
+      showMessage('error', 'Enter a name, account number, or account ID to search');
+      return false;
     }
     setLoading(true);
-    setError('');
+    clearMessage();
     setAccounts([]);
     setSearched(true);
     try {
-      setAccounts(await searchAdminBankingAccounts(form));
+      const results = await searchAdminBankingAccounts(form);
+      setAccounts(results);
+      if (showSearchSuccess) {
+        showMessage('success', `Found ${results.length} account${results.length === 1 ? '' : 's'} matching your search.`);
+      }
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to search banking accounts');
+      showMessage('error', err instanceof Error ? err.message : 'Unable to search banking accounts');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -102,15 +130,16 @@ export function BankingAdminPage() {
 
   async function refreshSearchResults() {
     if (searched && hasSearchCriteria(searchForm)) {
-      await searchAccounts(searchForm, false);
+      return searchAccounts(searchForm, false, false);
     }
+    return true;
   }
 
   function clearSearch() {
     setSearchForm(emptySearchForm());
     setAccounts([]);
     setSearched(false);
-    setError('');
+    clearMessage();
   }
 
   async function handleSearch(event: FormEvent) {
@@ -121,13 +150,16 @@ export function BankingAdminPage() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
-    setError('');
+    clearMessage();
     try {
-      await createBankingAccount(createForm);
+      const account = await createBankingAccount(createForm);
       setCreateForm(emptyCreateForm());
-      await refreshSearchResults();
+      const refreshed = await refreshSearchResults();
+      if (refreshed) {
+        showMessage('success', `The account is created: ${formatAccountDetails(account)}.`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to create account');
+      showMessage('error', err instanceof Error ? err.message : 'Unable to create account');
     } finally {
       setSaving(false);
     }
@@ -139,13 +171,16 @@ export function BankingAdminPage() {
       return;
     }
     setSaving(true);
-    setError('');
+    clearMessage();
     try {
-      await updateBankingAccount(updateForm.id, updateForm);
+      const account = await updateBankingAccount(updateForm.id, updateForm);
       setUpdateForm(emptyUpdateForm());
-      await refreshSearchResults();
+      const refreshed = await refreshSearchResults();
+      if (refreshed) {
+        showMessage('success', `The account is updated: ${formatAccountDetails(account)}.`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to update account');
+      showMessage('error', err instanceof Error ? err.message : 'Unable to update account');
     } finally {
       setSaving(false);
     }
@@ -155,34 +190,58 @@ export function BankingAdminPage() {
     if (!confirm(`Delete account ${accountId}?`)) {
       return;
     }
-    setError('');
+    clearMessage();
     try {
       await deleteBankingAccount(accountId);
-      await refreshSearchResults();
+      const refreshed = await refreshSearchResults();
+      if (refreshed) {
+        showMessage('success', `The account ID ${accountId} is deleted.`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to delete account');
+      showMessage('error', err instanceof Error ? err.message : 'Unable to delete account');
     }
+  }
+
+  function selectAccountForUpdate(account: BankingAccount) {
+    setUpdateForm({
+      id: account.id,
+      displayName: account.holderName,
+      accountSegment: account.accountSegment,
+      accountType: account.accountType,
+      creditLimit: account.creditLimit ?? 0
+    });
+    setActiveModule('update');
+  }
+
+  function selectAccountForTransaction(account: BankingAccount) {
+    setTransactionForm({ accountNumber: account.accountNumber, amount: 0 });
+    setActiveModule('transactions');
   }
 
   async function handleTransaction(action: 'DEPOSIT' | 'WITHDRAWAL') {
     const selectedAccount = accounts.find((account) => account.accountNumber === transactionForm.accountNumber);
     if (!selectedAccount) {
-      setError('Select an account from the search results before transacting');
+      showMessage('error', 'Select an account from the search results before transacting');
       return;
     }
     setSaving(true);
-    setError('');
+    clearMessage();
     try {
       const payload = { amount: Number(transactionForm.amount) };
-      if (action === 'DEPOSIT') {
-        await adminDeposit(selectedAccount.id, payload);
-      } else {
-        await adminWithdraw(selectedAccount.id, payload);
-      }
+      const transaction = action === 'DEPOSIT'
+        ? await adminDeposit(selectedAccount.id, payload)
+        : await adminWithdraw(selectedAccount.id, payload);
       setTransactionForm(emptyTransactionForm());
-      await refreshSearchResults();
+      const refreshed = await refreshSearchResults();
+      if (refreshed) {
+        if (action === 'DEPOSIT') {
+          showMessage('success', `Deposit completed for ${transaction.accountNumber}: amount ${transaction.amount.toFixed(2)}, new balance ${transaction.balanceAfter.toFixed(2)}.`);
+        } else {
+          showMessage('success', `Withdrawal completed for ${transaction.accountNumber}: amount ${transaction.amount.toFixed(2)}, new balance ${transaction.balanceAfter.toFixed(2)}.`);
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to process transaction');
+      showMessage('error', err instanceof Error ? err.message : 'Unable to process transaction');
     } finally {
       setSaving(false);
     }
@@ -194,9 +253,51 @@ export function BankingAdminPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">Banking Admin</h2>
-            <p className="text-sm text-slate-400">Search by name, account number, or account ID before managing accounts.</p>
+            <p className="text-sm text-slate-400">Choose an admin module to search, create, update, or transact on accounts.</p>
           </div>
         </div>
+        <nav className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Banking admin modules">
+          {adminModules.map((module) => {
+            const active = activeModule === module.id;
+            return (
+              <button
+                key={module.id}
+                type="button"
+                onClick={() => {
+                  setActiveModule(module.id);
+                  clearMessage();
+                }}
+                className={`rounded-xl border p-4 text-left transition ${
+                  active
+                    ? 'border-cyan-400 bg-cyan-950/40 text-cyan-100'
+                    : 'border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-600 hover:bg-slate-800'
+                }`}
+              >
+                <span className="block font-medium">{module.label}</span>
+                <span className="mt-1 block text-sm text-slate-400">{module.description}</span>
+              </button>
+            );
+          })}
+        </nav>
+        {message && (
+          <p
+            className={`mt-4 rounded-lg px-3 py-2 text-sm ${
+              message.type === 'error'
+                ? 'bg-red-950/70 text-red-200'
+                : 'bg-emerald-950/70 text-emerald-200'
+            }`}
+          >
+            {message.text}
+          </p>
+        )}
+      </section>
+
+      {activeModule === 'search' && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <div>
+            <h3 className="text-lg font-semibold">Search accounts</h3>
+            <p className="mt-1 text-sm text-slate-400">Search by name, account number, or account ID before managing accounts.</p>
+          </div>
         <form onSubmit={handleSearch} className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto] lg:items-end">
           <Field label="Name" value={searchForm.name} onChange={(value) => setSearchForm({ ...searchForm, name: value })} />
           <Field label="Account Number" value={searchForm.accountNumber} onChange={(value) => setSearchForm({ ...searchForm, accountNumber: value })} />
@@ -210,7 +311,6 @@ export function BankingAdminPage() {
             </button>
           </div>
         </form>
-        {error && <p className="mt-4 rounded-lg bg-red-950/70 px-3 py-2 text-sm text-red-200">{error}</p>}
         {loading ? (
           <p className="mt-4 text-slate-400">Searching accounts...</p>
         ) : !searched ? (
@@ -246,13 +346,7 @@ export function BankingAdminPage() {
                         <button
                           type="button"
                           className="text-cyan-400"
-                          onClick={() => setUpdateForm({
-                            id: account.id,
-                            displayName: account.holderName,
-                            accountSegment: account.accountSegment,
-                            accountType: account.accountType,
-                            creditLimit: account.creditLimit ?? 0
-                          })}
+                          onClick={() => selectAccountForUpdate(account)}
                         >
                           Edit
                         </button>
@@ -266,14 +360,14 @@ export function BankingAdminPage() {
                         <button
                           type="button"
                           className="text-emerald-400"
-                          onClick={() => setTransactionForm({ accountNumber: account.accountNumber, amount: 0 })}
+                          onClick={() => selectAccountForTransaction(account)}
                         >
                           Deposit
                         </button>
                         <button
                           type="button"
                           className="text-amber-400"
-                          onClick={() => setTransactionForm({ accountNumber: account.accountNumber, amount: 0 })}
+                          onClick={() => selectAccountForTransaction(account)}
                         >
                           Withdraw
                         </button>
@@ -286,10 +380,12 @@ export function BankingAdminPage() {
           </div>
         )}
       </section>
+      )}
 
-      <section className="grid gap-6 lg:grid-cols-3">
-        <form onSubmit={handleCreate} className="rounded-2xl border border-slate-800 bg-slate-900 p-6 lg:col-span-2">
+      {activeModule === 'create' && (
+        <form onSubmit={handleCreate} className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h3 className="text-lg font-semibold">Create account</h3>
+          <p className="mt-1 text-sm text-slate-400">Create a person or company holder and open a savings or credit account.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label="Display name" value={createForm.displayName} onChange={(value) => setCreateForm({ ...createForm, displayName: value })} />
             <Field label="Username" value={createForm.username} onChange={(value) => setCreateForm({ ...createForm, username: value })} />
@@ -310,10 +406,20 @@ export function BankingAdminPage() {
             </button>
           </div>
         </form>
+      )}
 
+      {activeModule === 'update' && (
         <form onSubmit={handleUpdate} className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <h3 className="text-lg font-semibold">Update account</h3>
-          <p className="mt-1 text-sm text-slate-400">Select Edit from a row to load values here.</p>
+          <p className="mt-1 text-sm text-slate-400">Select Edit from the search module to load account values here.</p>
+          {updateForm.id == null && (
+            <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+              No account selected. Search for an account, then choose Edit from the results.
+              <button type="button" onClick={() => setActiveModule('search')} className="ml-3 text-cyan-400 hover:text-cyan-300">
+                Go to search
+              </button>
+            </div>
+          )}
           <div className="mt-4 space-y-4">
             <Field label="Display name" value={updateForm.displayName} onChange={(value) => setUpdateForm({ ...updateForm, displayName: value })} />
             <NumberField label="Credit limit" value={updateForm.creditLimit ?? 0} onChange={(value) => setUpdateForm({ ...updateForm, creditLimit: value })} />
@@ -329,11 +435,20 @@ export function BankingAdminPage() {
             </button>
           </div>
         </form>
-      </section>
+      )}
 
+      {activeModule === 'transactions' && (
       <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
         <h3 className="text-lg font-semibold">Admin transaction</h3>
-        <p className="mt-1 text-sm text-slate-400">Choose any account from the table to deposit or withdraw.</p>
+        <p className="mt-1 text-sm text-slate-400">Choose an account from search results, then deposit or withdraw.</p>
+        {!transactionForm.accountNumber && (
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+            No account selected. Search for an account, then choose Deposit or Withdraw from the results.
+            <button type="button" onClick={() => setActiveModule('search')} className="ml-3 text-cyan-400 hover:text-cyan-300">
+              Go to search
+            </button>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap items-end gap-4">
           <Field label="Account Number" value={transactionForm.accountNumber} onChange={(value) => setTransactionForm({ ...transactionForm, accountNumber: value })} />
           <NumberField label="Amount" value={transactionForm.amount} onChange={(value) => setTransactionForm({ ...transactionForm, amount: value })} />
@@ -341,6 +456,7 @@ export function BankingAdminPage() {
           <button type="button" disabled={saving || !transactionForm.accountNumber} onClick={() => void handleTransaction('WITHDRAWAL')} className="rounded-lg bg-amber-500 px-4 py-2 font-medium text-slate-950 hover:bg-amber-400 disabled:opacity-60">Withdraw</button>
         </div>
       </section>
+      )}
     </div>
   );
 }

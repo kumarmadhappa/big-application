@@ -10,6 +10,7 @@ React + Express + Tailwind CSS frontend for user management and banking workflow
 - login with JWT stored in HTTP-only cookies
 - user list
 - banking admin and holder dashboards
+- module-based banking admin page for account search, create, update, and transactions
 - banking admin account search by name, account number, or account ID
 - create/edit/delete user screens
 - Express backend-for-frontend proxy to the API gateway
@@ -67,8 +68,19 @@ npm run start
 10. Express stores JWTs in HTTP-only cookies and returns the auth response.
 11. `UsersPage.tsx` calls `/api/users` to load the list.
 12. `BankingLandingPage.tsx` redirects admins to `/banking/admin` and holders to `/banking/holder`.
-13. `BankingAdminPage.tsx` requires admins to search by holder name, account number, or account ID before account rows are loaded.
+13. `BankingAdminPage.tsx` behaves like a single-page admin console with modules for search, create account, update account, and transactions.
 14. `BankingHolderPage.tsx` manages only the signed-in holder's accounts.
 15. Express adds the access token from cookies and proxies to the gateway.
 16. The gateway forwards the call to `user-service` or `banking-system`.
 17. Logout clears cookies in Express and returns to the Home page.
+
+## Banking admin modules
+
+`BankingAdminPage.tsx` does not load all bank accounts on initial page load. It renders only the selected in-page module:
+
+- `Search accounts` searches by holder name, account number, or account ID.
+- `Create account` loads the account creation form.
+- `Update account` loads the update form after an account is selected from search results.
+- `Transactions` loads the deposit/withdraw form after an account is selected from search results.
+
+Selecting `Edit`, `Deposit`, or `Withdraw` from a search result opens the relevant module with the selected account prefilled. After create, update, delete, deposit, or withdrawal, the page refreshes the current search results instead of requesting the full account list.
